@@ -218,6 +218,8 @@ std::unique_ptr<driver::module> function::make_bin(ir::module &module, driver::d
   codegen::transform::reassociate reassociate;
   codegen::transform::coalesce coalesce(&align, &layouts);
   codegen::generator isel(&axes, &layouts, &align, &allocation, &swizzle, target.get(), opt.num_warps);
+  ir::print(module, std::cout);
+  exit(1);
   // run passes
   dce.run(module);
   disassociate.run(module);

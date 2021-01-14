@@ -337,11 +337,11 @@ protected:
 
 /*
  * '+', '-', '*', '/', '%', '<', '>', '<<', '>>', '|', '&', '^'
- * '=',(复合赋值运算符被拆分为两个运算)
+ * '=',
  * '==', '!=', '<=', '>=',
  * '&&', '||'
- * '['(下标运算符), '.'(成员运算符)
- * ','(逗号运算符),
+ * '[', '.'
+ * ',',
  */
 class BinaryOp : public Expr {
   template<typename T> friend class Evaluator;
@@ -351,25 +351,29 @@ class BinaryOp : public Expr {
   friend class Declaration;
 
 public:
-  static BinaryOp* New(const Token* tok, Expr* lhs, Expr* rhs);
-  static BinaryOp* New(const Token* tok, int op, Expr* lhs, Expr* rhs);
+  static BinaryOp* New(const Token* tok, Expr* lhs, Expr* rhs, int meta = 0);
+  static BinaryOp* New(const Token* tok, int op, Expr* lhs, Expr* rhs, int meta = 0);
   virtual ~BinaryOp() {}
   virtual void Accept(Visitor* v);
 
   // Member ref operator is a lvalue
   virtual bool IsLVal() {
     switch (op_) {
-    case '.': return !Type()->ToArray() && lhs_->IsLVal();
-    case ']': return !Type()->ToArray();
-    case Token::MASKED_DEREF: return true;
-    default: return false;
+      case '.': return !Type()->ToArray() && lhs_->IsLVal();
+      case ']': return !Type()->ToArray();
+      case Token::SLICE: return lhs_->IsLVal();
+      case Token::MASKED_DEREF: return true;
+      default: return false;
     }
+  }
+  int getMetadata() {
+    return metadata_;
   }
   ArithmType* Convert();
   static void Broadcast(Expr* loc, Expr*& lhs, Expr*& rhs, QualType &type);
 
   virtual void TypeChecking();
-  void SubScriptingOpTypeChecking();
+  void SliceOpTypeChecking();
   void MemberRefOpTypeChecking();
   void MultiOpTypeChecking();
   void AdditiveOpTypeChecking();
@@ -385,8 +389,8 @@ public:
   void CommaOpTypeChecking();
 
 protected:
-  BinaryOp(const Token* tok, int op, Expr* lhs, Expr* rhs)
-      : Expr(tok, nullptr), op_(op) {
+  BinaryOp(const Token* tok, int op, Expr* lhs, Expr* rhs, int metadata = 0)
+      : Expr(tok, nullptr), op_(op), metadata_(metadata){
         lhs_ = lhs, rhs_ = rhs;
         if (op != '.') {
           lhs_ = MayCast(lhs);
@@ -395,6 +399,7 @@ protected:
       }
 
   int op_;
+  int metadata_;
   Expr* lhs_;
   Expr* rhs_;
 };
@@ -471,7 +476,6 @@ private:
   Expr* operand_;
   PermInt perm_;
 };
-
 
 // cond ? true ： false
 class ConditionalOp : public Expr {

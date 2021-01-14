@@ -73,6 +73,9 @@ public:
   value* create_fp_trunc(value *src, type *dst_ty, const std::string &name = "");
   value* create_int_cast(value *src, type *dst_ty, bool is_signed, const std::string &name = "");
   value *create_downcast(value *arg, const std::string &name = "");
+  value *create_set_slice(value *arg, value *idx, int axis, value *val, const std::string &name = "");
+  value *create_get_slice(value *arg, value *idx, int axis, const std::string &name = "");
+
   // Phi instruction
   phi_node* create_phi(type *ty, unsigned num_reserved, const std::string &name = "");
   // Binary instructions

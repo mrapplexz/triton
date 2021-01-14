@@ -154,6 +154,8 @@ void Generator::VisitBinaryOp(BinaryOp* binary) {
         return set_ret(bld_->create_fcmpONE(lhs, rhs));
       else
         return set_ret(bld_->create_icmpNE(lhs, rhs));
+    case Token::SLICE:
+      return set_ret(bld_->create_get_slice(lhs, rhs, binary->getMetadata()));
     default:
       return error_not_implemented("binary operator " + std::to_string(binary->op_) + " not implemented");
   }
@@ -777,13 +779,25 @@ void Generator::popScope() {
 
 // LValue Generator
 void LValAssigner::VisitBinaryOp(BinaryOp* binary) {
-  if(binary->op_ != Token::MASKED_DEREF)
+  if(binary->op_ == Token::MASKED_DEREF){
+    gen_->VisitExpr(binary->lhs_);
+    ir::value* mask = gen_->ret_;
+    gen_->VisitExpr(binary->rhs_);
+    ir::value* addr = gen_->ret_;
+    ret_ = gen_->bld_->create_masked_store(addr, rhs_, mask);
+  }
+  else if(binary->op_ == Token::SLICE){
+    gen_->VisitExpr(binary->lhs_);
+    ir::value* arr = gen_->ret_;
+    gen_->VisitExpr(binary->rhs_);
+    ir::value* idx = gen_->ret_;
+    int ax = binary->getMetadata();
+    ret_ = gen_->bld_->create_set_slice(arr, idx, ax, rhs_);
+    rhs_ = ret_;
+    binary->lhs_->Accept(this);
+  }
+  else
     error_not_implemented("lvalue for binary non masked-deref not implemented");
-  gen_->VisitExpr(binary->lhs_);
-  ir::value* mask = gen_->ret_;
-  gen_->VisitExpr(binary->rhs_);
-  ir::value* addr = gen_->ret_;
-  ret_ = gen_->bld_->create_masked_store(addr, rhs_, mask);
 }
 
 void LValAssigner::VisitUnaryOp(UnaryOp* unary) {
@@ -802,6 +816,7 @@ void LValAssigner::VisitObject(Object* obj) {
 
 void LValAssigner::VisitIdentifier(Identifier* ident) {
   std::string name = ident->Name();
+  std::cout << name << std::endl;
   gen_->mod_->set_value(name, rhs_);
   ret_ = rhs_;
 }

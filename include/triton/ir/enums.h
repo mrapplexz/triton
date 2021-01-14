@@ -121,6 +121,8 @@ enum value_id_t: unsigned {
   INST_SPLAT,
   INST_BROADCAST,
   INST_DOWNCAST,
+  INST_SET_SLICE,
+  INST_GET_SLICE,
   // builtin
   INST_GET_PROGRAM_ID,
   INST_GET_NUM_PROGRAMS,

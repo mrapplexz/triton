@@ -558,7 +558,6 @@ public:
   _TRITON_DEFINE_ACCEPT(broadcast_inst)
 };
 
-
 // downcast
 
 class downcast_inst: public unary_inst {
@@ -571,6 +570,47 @@ public:
   _TRITON_DEFINE_CLONE(downcast_inst)
   _TRITON_DEFINE_ACCEPT(downcast_inst)
 };
+
+class slice_inst: public instruction {
+protected:
+  slice_inst(type* ty, value_id_t ity, value *arg, value *idx, int axis, value *val, const std::string &name, instruction *next);
+public:
+  int    get_axis() { return axis_;          }
+  value* get_arr () { return get_operand(0); }
+  value* get_idx () { return get_operand(1); }
+private:
+  int axis_;
+};
+
+// set_slice
+class set_slice_inst: public slice_inst {
+private:
+  std::string repr_impl() const { return "set_slice"; }
+public:
+  static instruction* create(value *arg, value *idx, int axis, value* val,
+                      const std::string &name = "", instruction *next = nullptr);
+  value* get_val () { return get_operand(2); }
+  _TRITON_DEFINE_CLONE(set_slice_inst)
+  _TRITON_DEFINE_ACCEPT(set_slice_inst)
+protected:
+  set_slice_inst(value *arg, value *idx, int axis, value* val, const std::string &name, instruction *next);
+};
+
+// get_slice
+
+class get_slice_inst: public slice_inst {
+private:
+  static type::tile_shapes_t ret_shapes(value* arg, int axis);
+  std::string repr_impl() const { return "get_slice"; }
+public:
+  static instruction* create(value *arg, value *idx, int axis,
+                      const std::string &name = "", instruction *next = nullptr);
+  _TRITON_DEFINE_CLONE(get_slice_inst)
+  _TRITON_DEFINE_ACCEPT(get_slice_inst)
+protected:
+  get_slice_inst(value* arg, value *idx, int axis, const std::string &name, instruction *next);
+};
+
 
 //===----------------------------------------------------------------------===//
 //                               builtin_inst classes
@@ -674,13 +714,6 @@ public:
   _TRITON_DEFINE_CLONE(dot_inst)
   _TRITON_DEFINE_ACCEPT(dot_inst)
 };
-
-//class outer_inst: public builtin_inst {
-//private:
-//  outer_inst(value *A, value *B, value *C, const std::string &name, instruction *next);
-//public:
-//  static instruction* create(value *A, value *B, value *C, const std::string &name = "", instruction *next = nullptr);
-//};
 
 class trans_inst: public builtin_inst {
 public:

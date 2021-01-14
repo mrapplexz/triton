@@ -67,6 +67,9 @@ class kernel:
     arg_types = libtriton.get_fn_signature(self.src, self.opt)
     size = sum([sizes[x] for x in arg_types])
     self.tys = ''.join([codes[x] for x in arg_types])
+    has_buffer_arg = libtriton.arg_type.buffer in arg_types
+    self.tensidx = arg_types.index(libtriton.arg_type.buffer) if has_buffer_arg else -1
+    self.is_debug = 'TRITON_DEBUG_MODE' in os.environ
 
   def asm(self, mode, device, **kwargs):
     dev_id = device.index
@@ -99,19 +102,15 @@ class kernel:
     return libtriton.get_fn_asm((self.op_id, dev_id), mode, opt)
 
   def __call__(self, *args, **kwargs):
-    if 'TRITON_DEBUG_MODE' in os.environ:
+    if self.is_debug:
       _args = args
       args = [x.clone() if isinstance(x, torch.Tensor) else x for x in _args]
       for i in range(len(args)):
         if isinstance(args[i], torch.Tensor):
           args[i] = torch.ops.triton.cuda_empty_like(args[i])
           args[i].copy_(_args[i])
-      torch.cuda.synchronize()
-    for x in args:
-      if isinstance(x, torch.Tensor):
-        device = x.device.index
-        device = -1 if device is None else device
-        break
+    device = None if self.tensidx == -1 else args[self.tensidx].device.index
+    device = -1 if device is None else device
     # lazily register function for device
     libtriton.register_fn((self.op_id, device), self.src, self.opt)
     # launch grid
@@ -119,16 +118,12 @@ class kernel:
       raise RuntimeError('Must provide grid for kernel launch')
     grid = kwargs['grid']
     libtriton.register_grid((self.op_id, device), grid)
-    # re-allocate buffers for auto-tuning
-    if 'autotune_buf' in kwargs:
-      pass
     # launch
     params    = pack(self.tys, *[x.data_ptr() if isinstance(x, torch.Tensor) else x for x in args])
     names     = list(kwargs['constants'].keys()) if 'constants' in kwargs else []
     constants = list(kwargs['constants'].values()) if 'constants' in kwargs else []
     torch.ops.triton.launch_kernel(self.op_id, device, params, names, constants)
-    if 'TRITON_DEBUG_MODE' in os.environ:
-      torch.cuda.synchronize()
+    if self.is_debug:
       for i in range(len(args)):
         if isinstance(args[i], torch.Tensor):
           _args[i].copy_(args[i].clone())

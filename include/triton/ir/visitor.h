@@ -47,6 +47,8 @@ class reshape_inst;
 class splat_inst;
 class broadcast_inst;
 class downcast_inst;
+class get_slice_inst;
+class set_slice_inst;
 
 class exp_inst;
 class log_inst;
@@ -126,6 +128,8 @@ public:
   virtual void visit_splat_inst(splat_inst*) = 0;
   virtual void visit_broadcast_inst(broadcast_inst*) = 0;
   virtual void visit_downcast_inst(downcast_inst*) = 0;
+  virtual void visit_set_slice_inst(set_slice_inst*) = 0;
+  virtual void visit_get_slice_inst(get_slice_inst*) = 0;
 
   virtual void visit_get_program_id_inst(get_program_id_inst*) = 0;
   virtual void visit_get_num_program_inst(get_num_program_inst*) = 0;

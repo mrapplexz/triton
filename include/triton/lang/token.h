@@ -95,6 +95,7 @@ public:
 
     ELLIPSIS,
     MASKED_DEREF,
+    SLICE,
     // Punctuators end
 
     // KEYWORD BEGIN

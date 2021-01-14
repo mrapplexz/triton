@@ -559,6 +559,44 @@ instruction* downcast_inst::create(value *arg, const std::string &name, instruct
 }
 
 //===----------------------------------------------------------------------===//
+//                               slice_inst classes
+//===----------------------------------------------------------------------===//
+
+
+slice_inst::slice_inst(type *ty, value_id_t ity, value *arg, value *idx, int axis, value *val, const std::string &name, instruction *next)
+  : instruction(ty, ity, 2 + (val != nullptr)) {
+  set_operand(0, arg);
+  set_operand(1, idx);
+  if(val != nullptr) set_operand(2, val);
+}
+
+// set_slice
+set_slice_inst::set_slice_inst(value *arg, value *idx, int axis, value *val, const std::string &name, instruction *next)
+  : slice_inst(arg->get_type(), INST_SET_SLICE, arg, idx, axis, val, name, next) { }
+
+instruction* set_slice_inst::create(value *arg, value *idx, int axis, value *val, const std::string &name, instruction *next){
+  return new set_slice_inst(arg, idx, axis, val, name, next);
+}
+
+// get_slice
+type::tile_shapes_t get_slice_inst::ret_shapes(value* arg, int axis) {
+  auto ret = arg->get_type()->get_tile_shapes();
+  ret.erase(ret.begin() + axis);
+  return ret;
+}
+
+get_slice_inst::get_slice_inst(value *arg, value *idx, int axis, const std::string &name, instruction *next)
+  : slice_inst(tile_type::get(arg->get_type()->get_scalar_ty(), ret_shapes(arg, axis)),
+               INST_GET_SLICE,
+               arg, idx, axis, nullptr, name, next) { }
+
+instruction* get_slice_inst::create(value *arg, value *idx, int axis, const std::string &name, instruction *next){
+  return new get_slice_inst(arg, idx, axis, name, next);
+}
+
+
+
+//===----------------------------------------------------------------------===//
 //                               matmul_inst classes
 //===----------------------------------------------------------------------===//
 

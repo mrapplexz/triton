@@ -45,8 +45,11 @@ __global__ void dot(TYPE * A __noalias __readonly __aligned(16),
       // prefetches operands
       bool checka[TM, TK] = rk[newaxis, :] < K;
       bool checkb[TK, TN] = rk[:, newaxis] < K;
-      TYPE a[TM, TK] = checka ? *pa : 0;
-      TYPE b[TK, TN] = checkb ? *pb : 0;
+      TYPE a[2, TM, TK];
+      TYPE b[2, TK, TN];
+      int  i = 0;
+      a[i, :, :] = checka ? *pa : 0;
+      b[i, :, :] = checkb ? *pb : 0;
       pa += TK * STRIDE_AK;
       pb += TK * STRIDE_BK;
       // reduction loop
@@ -54,9 +57,10 @@ __global__ void dot(TYPE * A __noalias __readonly __aligned(16),
       for(int k = K; k > 0; k -= TK){
         bool checka[TM, TK] = k > TK;
         bool checkb[TK, TN] = k > TK;
-        acc += a @ b;
-        a = *?(checka)pa;
-        b = *?(checkb)pb;
+        acc += a[i, :, :] @ b[i, :, :];
+        i = i ^ 1;
+        a[i, :, :] = *?(checka)pa;
+        b[i, :, :] = *?(checkb)pb;
         pa += TK * STRIDE_AK;
         pb += TK * STRIDE_BK;
       }

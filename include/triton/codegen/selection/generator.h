@@ -116,6 +116,8 @@ public:
   void visit_splat_inst(ir::splat_inst*);
   void visit_broadcast_inst(ir::broadcast_inst*);
   void visit_downcast_inst(ir::downcast_inst*);
+  void visit_set_slice_inst(ir::set_slice_inst *);
+  void visit_get_slice_inst(ir::get_slice_inst *);
   void visit_exp_inst(ir::exp_inst*);
   void visit_log_inst(ir::log_inst*);
   void visit_get_program_id_inst(ir::get_program_id_inst*);

@@ -454,17 +454,27 @@ Expr* Parser::ParseSubScripting(Expr* lhs) {
   size_t i = 0;
   const Token* tok;
   std::vector<std::pair<int, int>> redInfo;
+  std::vector<std::pair<int, Expr*>> sliceInfo;
   do {
     tok = ts_.Next();
     switch(tok->tag_) {
+//    case '^':{
+//      Expr* expr = ParseConditionalExpr();
+//      EnsureInteger(expr);
+//      int ax = Evaluator<long>().Eval(expr);
+//      axVec.push_back(ax);
+//      if(ax < 0 || ax >= lhsShape.size())
+//        Error(tok, "unknown axis %d in transposition", ax);
+//      shape.push_back(lhsShape[ax]);
+//      i++;
+//      break;
+//    }
       case ':':
         shape.push_back(lhsShape[i++]);
         break;
-
       case Token::NEWAXIS:
         shape.push_back(1);
         break;
-
       case Token::ADD:
       case Token::SUB:
       case Token::MAX:
@@ -474,22 +484,13 @@ Expr* Parser::ParseSubScripting(Expr* lhs) {
         shape.push_back(lhsShape[i++]);
         break;
       }
-
-      case '^':{
+      default:{
+        ts_.PutBack();
         Expr* expr = ParseConditionalExpr();
-        EnsureInteger(expr);
-        int ax = Evaluator<long>().Eval(expr);
-        axVec.push_back(ax);
-        if(ax < 0 || ax >= lhsShape.size())
-          Error(tok, "unknown axis %d in transposition", ax);
-        shape.push_back(lhsShape[ax]);
-        i++;
+        sliceInfo.push_back({i, expr});
+        shape.push_back(lhsShape[i++]);
         break;
       }
-
-      default:
-        Error(tok, "Unexpected subscript symbol encountered at dimension %d", i);
-        break;
     }
   }while(ts_.Try(','));
   ts_.Expect(']');
@@ -517,7 +518,11 @@ Expr* Parser::ParseSubScripting(Expr* lhs) {
       retType = TileType::New(shape, lhsQual);
     res = UnaryOp::New(Token::REDUCE, res, retType, r.second);
   }
-  if(!shape.empty()){
+  for(auto s: sliceInfo){
+    shape.erase(shape.begin() + s.first);
+    res = BinaryOp::New(tok, Token::SLICE, res, s.second, s.first);
+  }
+  if(!shape.empty() && sliceInfo.empty()){
     TileType *retType = TileType::New(shape, lhsQual);
     res = UnaryOp::New(Token::CAST, res, retType);
   }

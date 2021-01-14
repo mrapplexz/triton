@@ -517,6 +517,14 @@ void generator::visit_downcast_inst(ir::downcast_inst* x) {
   vals_[x][{}] = vals_[x->get_operand(0)][{i32(0)}];
 }
 
+void generator::visit_set_slice_inst(ir::set_slice_inst *){
+  throw std::runtime_error("not implemented");
+}
+
+void generator::visit_get_slice_inst(ir::get_slice_inst *){
+  throw std::runtime_error("not implemented");
+}
+
 /**
  * \brief Code Generation for `get_program_id`
  */
@@ -1463,7 +1471,7 @@ void generator::visit_masked_load_async_inst(ir::masked_load_async_inst* x){
     int out_off_1 = i % per_thread_ld;
     int out_off = (out_off_0*shapes[in_order[0]] + out_off_1)*2;
     // asm
-    FunctionType *ty = FunctionType::get(void_ty, {out_base->getType(), in_base->getType()}, false);
+    FunctionType *ty = FunctionType::get(void_ty, {builder_->getInt1Ty(), out_base->getType(), in_base->getType()}, false);
     std::string mod = (vector*2 == 16) ? ".cg" : ".ca";
     std::string asm_str = "@$0 cp.async" + mod + ".shared.global [$1 + " + std::to_string(out_off) + "], [$2 + " + std::to_string(in_off) + "], " + std::to_string(vector*2) + ";";
     InlineAsm *iasm = InlineAsm::get(ty, asm_str, "b,r,l", true);

@@ -172,12 +172,12 @@ Expr* Expr::MayCast(Expr* expr, QualType desType) {
   return retTy;
 }
 
-BinaryOp* BinaryOp::New(const Token* tok, Expr* lhs, Expr* rhs) {
-  return New(tok, tok->tag_, lhs, rhs);
+BinaryOp* BinaryOp::New(const Token* tok, Expr* lhs, Expr* rhs, int meta) {
+  return New(tok, tok->tag_, lhs, rhs, meta);
 }
 
 
-BinaryOp* BinaryOp::New(const Token* tok, int op, Expr* lhs, Expr* rhs) {
+BinaryOp* BinaryOp::New(const Token* tok, int op, Expr* lhs, Expr* rhs, int meta) {
   switch (op) {
   case ',': case '.': case '=':
   case '*': case '/': case '%':
@@ -195,12 +195,13 @@ BinaryOp* BinaryOp::New(const Token* tok, int op, Expr* lhs, Expr* rhs) {
   case Token::ELLIPSIS:
   case Token::MATMUL:
   case Token::MASKED_DEREF:
+  case Token::SLICE:
     break;
   default:
     assert(0);
   }
 
-  auto ret = new (binaryOpPool.Alloc()) BinaryOp(tok, op, lhs, rhs);
+  auto ret = new (binaryOpPool.Alloc()) BinaryOp(tok, op, lhs, rhs, meta);
   ret->pool_ = &binaryOpPool;
 
   ret->TypeChecking();
@@ -348,6 +349,9 @@ void BinaryOp::TypeChecking() {
   case Token::MASKED_DEREF:
     return MaskedDerefOpTypeChecking();
 
+  case Token::SLICE:
+    return SliceOpTypeChecking();
+
   default:
     assert(0);
   }
@@ -359,8 +363,16 @@ void BinaryOp::CommaOpTypeChecking() {
 }
 
 
-void BinaryOp::SubScriptingOpTypeChecking() {
-  assert(false);
+void BinaryOp::SliceOpTypeChecking() {
+  ::Type* lhsType = lhs_->Type();
+  ::Type* rhsType = rhs_->Type();
+  if(!lhsType->IsTile())
+    Error(this, "can only slice arrays");
+  if(rhsType->IsTile())
+    Error(this, "slice indices must be scalar at the moment");
+  auto shape = lhsType->ToTile()->Shape();
+  shape.erase(shape.begin() + metadata_);
+  type_ = TileType::New(shape, lhsType->ScalarType());
 }
 
 

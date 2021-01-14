@@ -298,6 +298,15 @@ value *builder::create_downcast(value *arg, const std::string &name) {
   return insert(downcast_inst::create(arg, name));
 }
 
+value *builder::create_set_slice(value *arg, value *idx, int axis, value *val, const std::string &name){
+  return insert(set_slice_inst::create(arg, idx, axis, val, name));
+}
+
+value *builder::create_get_slice(value *arg, value *idx, int axis, const std::string &name){
+  return insert(get_slice_inst::create(arg, idx, axis, name));
+}
+
+
 //===----------------------------------------------------------------------===//
 //                               built-in instructions
 //===----------------------------------------------------------------------===//
