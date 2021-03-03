@@ -5,6 +5,7 @@
 
 #include <memory>
 #include "triton/ir/type.h"
+#include <stdexcept>
 
 namespace triton{
 namespace ir{
